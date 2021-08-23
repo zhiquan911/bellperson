@@ -1,7 +1,7 @@
 use crate::bls::Engine;
 use crate::gpu::{
     error::{GPUError, GPUResult},
-    locks, sources,
+    locks, program,
 };
 use ff::Field;
 use log::info;
@@ -37,7 +37,7 @@ where
             .ok_or(GPUError::Simple("No working GPUs found!"))?;
 
         // Curently the FFT kernel is only implemented for OpenCL and not for CUDA
-        let program = match sources::program_use_framework::<E>(&device, &Framework::Opencl) {
+        let program = match program::program_use_framework::<E>(&device, &Framework::Opencl) {
             Ok(Program::Opencl(program)) => program,
             #[cfg(feature = "cuda")]
             Ok(_) => unreachable!(),

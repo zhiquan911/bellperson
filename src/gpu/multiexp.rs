@@ -1,5 +1,6 @@
 use super::error::{GPUError, GPUResult};
 use super::locks;
+use super::program;
 use super::sources;
 use super::utils;
 use crate::bls::Engine;
@@ -109,7 +110,7 @@ where
         let best_n = calc_best_chunk_size(MAX_WINDOW_SIZE, core_count, exp_bits);
         let n = std::cmp::min(max_n, best_n);
 
-        let program = sources::program::<E>(device)?;
+        let program = program::program::<E>(device)?;
 
         Ok(SingleMultiexpKernel {
             program,

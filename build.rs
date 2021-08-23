@@ -1,10 +1,15 @@
 /// The build script is needed to compile the CUDA kernel.
 
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", feature = "cuda"))]
 fn main() {
     use std::env;
     use std::path::PathBuf;
     use std::process::Command;
+
+    // Somehow the compiler thinks this module contains dead code
+    #[allow(dead_code)]
+    #[path = "src/gpu/sources.rs"]
+    mod sources;
 
     static CUDA_MULTIEXP_PATH: &str = "src/gpu/multiexp/multiexp32_ffclgen.cu";
 
@@ -20,9 +25,9 @@ fn main() {
         .arg("--fatbin")
         .arg("--gpu-architecture=sm_86")
         .arg("--generate-code=arch=compute_86,code=sm_86")
-        .arg("--generate-code=arch=compute_80,code=sm_80")
-        .arg("--generate-code=arch=compute_75,code=sm_75")
-        .arg("--define-macro=BLSTRS")
+        //.arg("--generate-code=arch=compute_80,code=sm_80")
+        //.arg("--generate-code=arch=compute_75,code=sm_75")
+        //.arg("--define-macro=BLSTRS")
         .arg("--output-file")
         .arg(&fatbin_path)
         .arg(CUDA_MULTIEXP_PATH)
@@ -41,5 +46,5 @@ fn main() {
     }
 }
 
-#[cfg(not(feature = "gpu"))]
+#[cfg(not(all(feature = "gpu", feature = "cuda")))]
 fn main() {}
