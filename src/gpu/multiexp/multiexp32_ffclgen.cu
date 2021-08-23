@@ -2,18 +2,17 @@
 #define COMMON_CL
 
 // Defines to make the code work with both, CUDA and OpenCL
-#ifdef __NV_CL_C_VERSION
-  #define NVIDIA
-
+#ifdef __NVCC__
   #define DEVICE __device__
   #define GLOBAL
-  #define KERNEL extern “C” __global__
+  #define KERNEL extern "C" __global__
   #define LOCAL __shared__
 
   #define GET_GLOBAL_ID() blockIdx.x * blockDim.x + threadIdx.x
   #define GET_GROUP_ID() blockIdx.x
   #define GET_LOCAL_ID() threadIdx.x
   #define GET_LOCAL_SIZE() blockDim.x
+  #define BARRIER_LOCAL() __syncthreads()
 
   typedef unsigned char uchar;
 #else // OpenCL
@@ -26,10 +25,15 @@
   #define GET_GROUP_ID() get_group_id(0)
   #define GET_LOCAL_ID() get_local_id(0)
   #define GET_LOCAL_SIZE() get_local_size(0)
+  #define BARRIER_LOCAL() barrier(CLK_LOCAL_MEM_FENCE)
 #endif
 
 typedef uint limb;
 #define LIMB_BITS (32)
+
+#ifdef __NV_CL_C_VERSION
+#define NVIDIA
+#endif
 
 #if defined(__WinterPark__) || defined(__BeaverCreek__) || defined(__Turks__) || \
     defined(__Caicos__) || defined(__Tahiti__) || defined(__Pitcairn__) || \
@@ -65,6 +69,158 @@ DEVICE limb add_with_carry(limb a, limb *b) {
 }
 
 #endif
+
+#ifndef NVIDIA_COMMON_CL
+#define NVIDIA_COMMON_CL
+
+#ifdef __NV_CL_C_VERSION
+#define NVIDIA
+#endif
+
+#ifdef NVIDIA
+
+// Code based on the work from Supranational, with special thanks to Niall Emmart:
+//
+// We would like to acknowledge Niall Emmart at Nvidia for his significant
+// contribution of concepts and code for generating efficient SASS on
+// Nvidia GPUs. The following papers may be of interest:
+//     Optimizing Modular Multiplication for NVIDIA's Maxwell GPUs
+//     https://ieeexplore.ieee.org/document/7563271
+//
+//     Faster modular exponentiation using double precision floating point
+//     arithmetic on the GPU
+//     https://ieeexplore.ieee.org/document/8464792
+
+typedef uint uint32_t;
+typedef int  int32_t;
+typedef uint limb;
+
+inline uint32_t add_cc(uint32_t a, uint32_t b) {
+  uint32_t r;
+
+  asm volatile ("add.cc.u32 %0, %1, %2;" : "=r"(r) : "r"(a), "r"(b));
+  return r;
+}
+
+inline uint32_t addc_cc(uint32_t a, uint32_t b) {
+  uint32_t r;
+
+  asm volatile ("addc.cc.u32 %0, %1, %2;" : "=r"(r) : "r"(a), "r"(b));
+  return r;
+}
+
+inline uint32_t addc(uint32_t a, uint32_t b) {
+  uint32_t r;
+
+  asm volatile ("addc.u32 %0, %1, %2;" : "=r"(r) : "r"(a), "r"(b));
+  return r;
+}
+
+
+inline uint32_t madlo(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  asm volatile ("mad.lo.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));
+  return r;
+}
+
+inline uint32_t madlo_cc(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  asm volatile ("mad.lo.cc.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));
+  return r;
+}
+
+inline uint32_t madloc_cc(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  asm volatile ("madc.lo.cc.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));
+  return r;
+}
+
+inline uint32_t madloc(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  asm volatile ("madc.lo.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));
+  return r;
+}
+
+inline uint32_t madhi(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  asm volatile ("mad.hi.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));
+  return r;
+}
+
+inline uint32_t madhi_cc(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  asm volatile ("mad.hi.cc.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));
+  return r;
+}
+
+inline uint32_t madhic_cc(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  asm volatile ("madc.hi.cc.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));
+  return r;
+}
+
+inline uint32_t madhic(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  asm volatile ("madc.hi.u32 %0, %1, %2, %3;" : "=r"(r) : "r"(a), "r"(b), "r"(c));
+  return r;
+}
+
+typedef struct {
+  int32_t _position;
+} chain_t;
+
+inline
+void chain_init(chain_t *c) {
+  c->_position = 0;
+}
+
+inline
+uint32_t chain_add(chain_t *ch, uint32_t a, uint32_t b) {
+  uint32_t r;
+
+  ch->_position++;
+  if(ch->_position==1)
+    r=add_cc(a, b);
+  else
+    r=addc_cc(a, b);
+  return r;
+}
+
+inline
+uint32_t chain_madlo(chain_t *ch, uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  ch->_position++;
+  if(ch->_position==1)
+    r=madlo_cc(a, b, c);
+  else
+    r=madloc_cc(a, b, c);
+  return r;
+}
+
+inline
+uint32_t chain_madhi(chain_t *ch, uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t r;
+
+  ch->_position++;
+  if(ch->_position==1)
+    r=madhi_cc(a, b, c);
+  else
+    r=madhic_cc(a, b, c);
+  return r;
+}
+
+#endif
+#endif
+
 
 #define Fr_LIMBS 8
 #define Fr_ONE ((Fr){ { 4294967294, 1, 215042, 1485092858, 3971764213, 2576109551, 2898593135, 405057881 } })
@@ -426,7 +582,7 @@ DEVICE Fr Fr_pow(Fr base, uint exponent) {
 
 
 // Store squares of the base in a lookup table for faster evaluation.
-DEVICE Fr Fr_pow_lookup(__global Fr *bases, uint exponent) {
+DEVICE Fr Fr_pow_lookup(GLOBAL Fr *bases, uint exponent) {
   Fr res = Fr_ONE;
   uint i = 0;
   while(exponent > 0) {
@@ -471,7 +627,7 @@ DEVICE void Fr_print(Fr a) {
 }
 
 
-uint bitreverse(uint n, uint bits) {
+DEVICE uint bitreverse(uint n, uint bits) {
   uint r = 0;
   for(int i = 0; i < bits; i++) {
     r = (r << 1) | (n & 1);
@@ -516,7 +672,7 @@ KERNEL void radix_fft(GLOBAL Fr* x, // Source buffer
     u[i] = Fr_mul(tmp, x[i*t]);
     tmp = Fr_mul(tmp, twiddle);
   }
-  barrier(CLK_LOCAL_MEM_FENCE);
+  BARRIER_LOCAL();
 
   const uint pqshift = max_deg - deg;
   for(uint rnd = 0; rnd < deg; rnd++) {
@@ -531,7 +687,7 @@ KERNEL void radix_fft(GLOBAL Fr* x, // Source buffer
       if(di != 0) u[i1] = Fr_mul(pq[di << rnd << pqshift], u[i1]);
     }
 
-    barrier(CLK_LOCAL_MEM_FENCE);
+    BARRIER_LOCAL();
   }
 
   for(uint i = counts >> 1; i < counte >> 1; i++) {
@@ -541,81 +697,13 @@ KERNEL void radix_fft(GLOBAL Fr* x, // Source buffer
 }
 
 /// Multiplies all of the elements by `field`
-KERNEL void mul_by_field(__global Fr* elements,
+KERNEL void mul_by_field(GLOBAL Fr* elements,
                         uint n,
                         Fr field) {
-  const uint gid = get_global_id(0);
+  const uint gid = GET_GLOBAL_ID();
   elements[gid] = Fr_mul(elements[gid], field);
 }
 
-
-#ifndef COMMON_CL
-#define COMMON_CL
-
-// Defines to make the code work with both, CUDA and OpenCL
-#ifdef __NV_CL_C_VERSION
-  #define NVIDIA
-
-  #define DEVICE __device__
-  #define GLOBAL
-  #define KERNEL extern “C” __global__
-  #define LOCAL __shared__
-
-  #define GET_GLOBAL_ID() blockIdx.x * blockDim.x + threadIdx.x
-  #define GET_GROUP_ID() blockIdx.x
-  #define GET_LOCAL_ID() threadIdx.x
-  #define GET_LOCAL_SIZE() blockDim.x
-
-  typedef unsigned char uchar;
-#else // OpenCL
-  #define DEVICE
-  #define GLOBAL __global
-  #define KERNEL __kernel
-  #define LOCAL __local
-
-  #define GET_GLOBAL_ID() get_global_id(0)
-  #define GET_GROUP_ID() get_group_id(0)
-  #define GET_LOCAL_ID() get_local_id(0)
-  #define GET_LOCAL_SIZE() get_local_size(0)
-#endif
-
-typedef uint limb;
-#define LIMB_BITS (32)
-
-#if defined(__WinterPark__) || defined(__BeaverCreek__) || defined(__Turks__) || \
-    defined(__Caicos__) || defined(__Tahiti__) || defined(__Pitcairn__) || \
-    defined(__Capeverde__) || defined(__Cayman__) || defined(__Barts__) || \
-    defined(__Cypress__) || defined(__Juniper__) || defined(__Redwood__) || \
-    defined(__Cedar__) || defined(__ATI_RV770__) || defined(__ATI_RV730__) || \
-    defined(__ATI_RV710__) || defined(__Loveland__) || defined(__GPU__) || \
-    defined(__Hawaii__)
-#define AMD
-#endif
-
-// Returns a * b + c + d, puts the carry in d
-DEVICE limb mac_with_carry(limb a, limb b, limb c, limb *d) {
-  ulong res = (ulong)a * b + c + *d;
-  *d = res >> 32;
-  return res;
-}
-
-// Returns a + b, puts the carry in b
-DEVICE limb add_with_carry(limb a, limb *b) {
-  #ifdef NVIDIA
-    limb lo, hi;
-    asm("add.cc.u32 %0, %2, %3;\r\n"
-        "addc.u32 %1, 0, 0;\r\n"
-        : "=r"(lo), "=r"(hi) : "r"(a), "r"(*b));
-    *b = hi;
-    return lo;
-  #else
-    limb lo = a + *b;
-    *b = lo < a;
-    return lo;
-  #endif
-}
-
-#endif
 
 #define Fq_LIMBS 12
 #define Fq_ONE ((Fq){ { 196605, 1980301312, 3289120770, 3958636555, 1405573306, 1598593111, 1884444485, 2010011731, 2723605613, 1543969431, 4202751123, 368467651 } })
@@ -985,7 +1073,7 @@ DEVICE Fq Fq_pow(Fq base, uint exponent) {
 
 
 // Store squares of the base in a lookup table for faster evaluation.
-DEVICE Fq Fq_pow_lookup(__global Fq *bases, uint exponent) {
+DEVICE Fq Fq_pow_lookup(GLOBAL Fq *bases, uint exponent) {
   Fq res = Fq_ONE;
   uint i = 0;
   while(exponent > 0) {
@@ -1074,7 +1162,7 @@ DEVICE G1_projective G1_double(G1_projective inp) {
 }
 
 // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-madd-2007-bl
-G1_projective G1_add_mixed(G1_projective a, G1_affine b) {
+DEVICE G1_projective G1_add_mixed(G1_projective a, G1_affine b) {
   const Fq local_zero = Fq_ZERO;
   if(Fq_eq(a.z, local_zero)) {
     const Fq local_one = Fq_ONE;
@@ -1173,7 +1261,7 @@ KERNEL void G1_bellman_multiexp(
     uint window_size) {
 
   // We have `num_windows` * `num_groups` threads per multiexp.
-  const uint gid = get_global_id(0);
+  const uint gid = GET_GLOBAL_ID();
   if(gid >= num_windows * num_groups) return;
 
   // We have (2^window_size - 1) buckets.
@@ -1331,7 +1419,7 @@ DEVICE G2_projective G2_double(G2_projective inp) {
 }
 
 // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-madd-2007-bl
-G2_projective G2_add_mixed(G2_projective a, G2_affine b) {
+DEVICE G2_projective G2_add_mixed(G2_projective a, G2_affine b) {
   const Fq2 local_zero = Fq2_ZERO;
   if(Fq2_eq(a.z, local_zero)) {
     const Fq2 local_one = Fq2_ONE;
@@ -1430,7 +1518,7 @@ KERNEL void G2_bellman_multiexp(
     uint window_size) {
 
   // We have `num_windows` * `num_groups` threads per multiexp.
-  const uint gid = get_global_id(0);
+  const uint gid = GET_GLOBAL_ID();
   if(gid >= num_windows * num_groups) return;
 
   // We have (2^window_size - 1) buckets.

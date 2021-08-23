@@ -54,6 +54,7 @@ where
     E: Engine,
 {
     vec![
+        ffgen::shared(),
         ffgen::field::<E::Fr>("Fr"),
         fft("Fr"),
         ffgen::field::<E::Fq>("Fq"),

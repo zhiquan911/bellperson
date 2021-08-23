@@ -42,7 +42,7 @@ DEVICE POINT_projective POINT_double(POINT_projective inp) {
 }
 
 // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-madd-2007-bl
-POINT_projective POINT_add_mixed(POINT_projective a, POINT_affine b) {
+DEVICE POINT_projective POINT_add_mixed(POINT_projective a, POINT_affine b) {
   const FIELD local_zero = FIELD_ZERO;
   if(FIELD_eq(a.z, local_zero)) {
     const FIELD local_one = FIELD_ONE;

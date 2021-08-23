@@ -47,6 +47,7 @@ rust-gpu-tools = { git = "https://github.com/filecoin-project/rust-gpu-tools", b
 #rust-gpu-tools = { path = "../rust-gpu-tools", default-features = false, features = ["opencl"], optional = true }
 #ff-cl-gen = { version = "0.3.0", optional = true }
 ff-cl-gen = { git = "https://github.com/filecoin-project/ff-cl-gen", branch = "perf-nvidia-mul-vmx", optional = true }
+#ff-cl-gen = { path = "../ff-cl-gen", optional = true }
 fs2 = { version = "0.4.3", optional = true }
 yastl = "0.1.2"
 

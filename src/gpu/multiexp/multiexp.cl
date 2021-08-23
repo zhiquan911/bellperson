@@ -19,7 +19,7 @@ KERNEL void POINT_bellman_multiexp(
     uint window_size) {
 
   // We have `num_windows` * `num_groups` threads per multiexp.
-  const uint gid = get_global_id(0);
+  const uint gid = GET_GLOBAL_ID();
   if(gid >= num_windows * num_groups) return;
 
   // We have (2^window_size - 1) buckets.

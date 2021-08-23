@@ -1,4 +1,4 @@
-uint bitreverse(uint n, uint bits) {
+DEVICE uint bitreverse(uint n, uint bits) {
   uint r = 0;
   for(int i = 0; i < bits; i++) {
     r = (r << 1) | (n & 1);
@@ -43,7 +43,7 @@ KERNEL void radix_fft(GLOBAL FIELD* x, // Source buffer
     u[i] = FIELD_mul(tmp, x[i*t]);
     tmp = FIELD_mul(tmp, twiddle);
   }
-  barrier(CLK_LOCAL_MEM_FENCE);
+  BARRIER_LOCAL();
 
   const uint pqshift = max_deg - deg;
   for(uint rnd = 0; rnd < deg; rnd++) {
@@ -58,7 +58,7 @@ KERNEL void radix_fft(GLOBAL FIELD* x, // Source buffer
       if(di != 0) u[i1] = FIELD_mul(pq[di << rnd << pqshift], u[i1]);
     }
 
-    barrier(CLK_LOCAL_MEM_FENCE);
+    BARRIER_LOCAL();
   }
 
   for(uint i = counts >> 1; i < counte >> 1; i++) {
@@ -68,9 +68,9 @@ KERNEL void radix_fft(GLOBAL FIELD* x, // Source buffer
 }
 
 /// Multiplies all of the elements by `field`
-KERNEL void mul_by_field(__global FIELD* elements,
+KERNEL void mul_by_field(GLOBAL FIELD* elements,
                         uint n,
                         FIELD field) {
-  const uint gid = get_global_id(0);
+  const uint gid = GET_GLOBAL_ID();
   elements[gid] = FIELD_mul(elements[gid], field);
 }
