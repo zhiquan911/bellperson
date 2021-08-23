@@ -237,7 +237,6 @@ where
         let src = sources::kernel::<E>();
         println!("vmx: kernel source:\n\n\n\n\n{}\n\n\n\n\n\n", src);
 
-
         let kernels: Vec<_> = Device::all()
             .iter()
             .filter_map(|device| {
