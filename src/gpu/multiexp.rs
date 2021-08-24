@@ -1,7 +1,6 @@
 use super::error::{GPUError, GPUResult};
 use super::locks;
 use super::program;
-use super::sources;
 use super::utils;
 use crate::bls::Engine;
 use crate::multicore::Worker;
@@ -234,9 +233,6 @@ where
 {
     pub fn create(priority: bool) -> GPUResult<MultiexpKernel<E>> {
         let lock = locks::GPULock::lock();
-
-        let src = sources::kernel::<E>();
-        println!("vmx: kernel source:\n\n\n\n\n{}\n\n\n\n\n\n", src);
 
         let kernels: Vec<_> = Device::all()
             .iter()

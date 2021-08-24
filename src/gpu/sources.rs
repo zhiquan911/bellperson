@@ -1,3 +1,5 @@
+use log::trace;
+
 use blstrs::Engine;
 
 // Instead of having a very large OpenCL program written for a specific curve, with a lot of
@@ -36,7 +38,7 @@ pub fn kernel<E>() -> String
 where
     E: Engine,
 {
-    vec![
+    let source = vec![
         ff_cl_gen::shared(),
         ff_cl_gen::field::<E::Fr>("Fr"),
         fft("Fr"),
@@ -47,5 +49,8 @@ where
         ec("Fq2", "G2"),
         multiexp("G2", "Fr"),
     ]
-    .join("\n\n")
+    .join("\n\n");
+
+    trace!("Kernel source:\n{}", source);
+    source
 }

@@ -55,7 +55,6 @@ where
         Framework::Opencl => {
             info!("Using kernel on OpenCL.");
             let src = sources::kernel::<E>();
-            println!("vmx: src:\n\n\n{}\n\n\n\n", src);
             let opencl_device = device
                 .opencl_device()
                 .ok_or(GpuToolsError::DeviceNotFound)?;
