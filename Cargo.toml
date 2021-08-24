@@ -76,6 +76,6 @@ name = "lc"
 harness = false
 
 [patch.crates-io]
-pairing = { git = "https://github.com/dignifiedquire/pairing", branch = "patch-1" }
+pairing = { git = "https://github.com/zkcrypto/pairing", branch = "main" }
 
 
