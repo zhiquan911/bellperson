@@ -63,6 +63,7 @@ tempfile = "3.1.0"
 [build-dependencies]
 ff-cl-gen = { git = "https://github.com/filecoin-project/ff-cl-gen", branch = "perf-nvidia-mul-vmx", optional = true }
 blstrs = { version = "0.3", optional = true }
+log = "0.4.8"
 
 
 [features]
