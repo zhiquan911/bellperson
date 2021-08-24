@@ -44,7 +44,7 @@ KERNEL void POINT_bellman_multiexp(
   for(uint i = nstart; i < nend; i++) {
     uint ind = EXPONENT_get_bits(exps[i], bits, w);
 
-    #ifdef NVIDIA
+    #ifdef OPENCL_NVIDIA
       // O_o, weird optimization, having a single special case makes it
       // tremendously faster!
       // 511 is chosen because it's half of the maximum bucket len, but
