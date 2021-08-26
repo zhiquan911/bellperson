@@ -180,10 +180,10 @@ where
             .arg(&bucket_buffer)
             .arg(&result_buffer)
             .arg(&exp_buffer)
-            .arg(&(n as u32))
-            .arg(&(num_groups as u32))
-            .arg(&(num_windows as u32))
-            .arg(&(window_size as u32))
+            .arg(n as u32)
+            .arg(num_groups as u32)
+            .arg(num_windows as u32)
+            .arg(window_size as u32)
             .run()?;
 
         let mut results = vec![<G as CurveAffine>::Projective::zero(); 2 * self.core_count];
