@@ -23,9 +23,9 @@ fn main() {
     nvcc.arg("--optimize=6")
         .arg("--fatbin")
         .arg("--gpu-architecture=sm_86")
-        .arg("--generate-code=arch=compute_86,code=sm_86")
-        .arg("--generate-code=arch=compute_80,code=sm_80")
-        .arg("--generate-code=arch=compute_75,code=sm_75");
+        .arg("--generate-code=arch=compute_86,code=sm_86");
+        //.arg("--generate-code=arch=compute_80,code=sm_80");
+        //.arg("--generate-code=arch=compute_75,code=sm_75");
 
     // Hash the source and and the compile flags. Use that as the filename, so that the kernel is
     // only rebuilt if any of them change.
@@ -34,6 +34,10 @@ fn main() {
     hasher.update(&format!("{:?}", &nvcc));
     let kernel_digest = hex::encode(hasher.finalize());
 
+    fs::write("/tmp/kernel.digest", &kernel_digest).expect(
+        "Cannot write kernel digest at /tmp/kernel.digest."
+    );
+
     let source_path: PathBuf = [&out_dir, &format!("{}.cu", &kernel_digest)]
         .iter()
         .collect();
@@ -41,10 +45,12 @@ fn main() {
         .iter()
         .collect();
 
-    fs::write(&source_path, &kernel_source).expect(&format!(
-        "Cannot write kernel source at {}.",
-        source_path.to_str().unwrap()
-    ));
+    fs::write(&source_path, &kernel_source).unwrap_or_else(|_| {
+        panic!(
+            "Cannot write kernel source at {}.",
+            source_path.to_str().unwrap()
+            )
+    });
 
     if !fatbin_path.as_path().exists() {
         let status = nvcc
@@ -60,7 +66,7 @@ fn main() {
     }
 
     // Make sure that build.rs is run if the compiled output (the fatbin) was deleted.
-    println!("cargo:rerun-if-changed={}", fatbin_path.to_str().unwrap());
+    //println!("cargo:rerun-if-changed={}", fatbin_path.to_str().unwrap());
 
     // The idea to put the path to the farbin into a compile-time env variable is from
     // https://github.com/LutzCle/fast-interconnects-demo/blob/b80ea8e04825167f486ab8ac1b5d67cf7dd51d2c/rust-demo/build.rs
