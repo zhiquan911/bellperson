@@ -102,6 +102,7 @@ jobs:
       - run:
           name: Test << parameters.framework>> with << parameters.cargo-args >>
           command: BELLMAN_GPU_FRAMEWORK=<< parameters.framework >> cargo test --release << parameters.cargo-args >>
+          no_output_timeout: 30m
 
   rustfmt:
     executor: default
