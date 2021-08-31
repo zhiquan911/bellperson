@@ -81,9 +81,10 @@ pub fn dump_device_list() {
 }
 
 pub fn get_lock_gpu_device() -> opencl::GPUResult<&'static opencl::Device> {
-    let uuid = env::var("BELLMAN_LOCK_GPU_DEVICE_UUID").map_err(|_| opencl::GPUError::DeviceNotFound)?;
-    let device_uuid: opencl::DeviceUuid = uuid.as_str().try_into()?;
-    opencl::Device::by_uuid(device_uuid)
+    // nvidia-smi, bus-id = domain:bus:device.function
+    let uuid = env::var("BELLMAN_LOCK_GPU_DEVICE_BUS_ID").map_err(|_| opencl::GPUError::DeviceNotFound)?;
+    let bus_id: opencl::BusId = uuid.parse::<opencl::BusId>().map_err(|_| opencl::GPUError::DeviceNotFound)?;
+    opencl::Device::by_bus_id(bus_id)
 }
 
 #[cfg(feature = "gpu")]
