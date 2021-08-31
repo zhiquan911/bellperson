@@ -21,7 +21,7 @@ impl GPULock {
         debug!("Acquiring GPU lock at {:?} ...", &gpu_lock_file);
         let f = File::create(&gpu_lock_file)
             .unwrap_or_else(|_| panic!("Cannot create GPU lock file at {:?}", &gpu_lock_file));
-        f.lock_exclusive().unwrap();
+        // f.lock_exclusive().unwrap();
         debug!("GPU lock acquired!");
         GPULock(f)
     }

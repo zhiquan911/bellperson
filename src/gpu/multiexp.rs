@@ -222,12 +222,16 @@ where
     pub fn create(priority: bool) -> GPUResult<MultiexpKernel<E>> {
         let lock = locks::GPULock::lock();
 
-        let devices = opencl::Device::all();
+        // let devices = opencl::Device::all();
+
+        // Select the locked gpu device for FFT
+        let devices = super::get_lock_gpu_device().map_or_else(|_| opencl::Device::all(), |d| vec![d]);
 
         let kernels: Vec<_> = devices
             .into_iter()
             .map(|d| (d, SingleMultiexpKernel::<E>::create(d.clone(), priority)))
             .filter_map(|(device, res)| {
+                info!("Multiexp: Device: {:?}", device);
                 if let Err(ref e) = res {
                     error!(
                         "Cannot initialize kernel for device '{}'! Error: {}",

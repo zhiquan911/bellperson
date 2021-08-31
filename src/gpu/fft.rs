@@ -1,8 +1,5 @@
 use crate::bls::Engine;
-use crate::gpu::{
-    error::{GPUError, GPUResult},
-    locks, sources,
-};
+use crate::gpu::{error::{GPUError, GPUResult}, locks, sources, get_lock_gpu_device};
 use ff::Field;
 use log::info;
 use rust_gpu_tools::*;
@@ -36,8 +33,12 @@ where
             return Err(GPUError::Simple("No working GPUs found!"));
         }
 
-        // Select the first device for FFT
-        let device = devices[0];
+        // Select the locked gpu device for FFT
+        let device = get_lock_gpu_device().unwrap_or_else(|_| {
+            // Select the first device for FFT
+            let first_device = devices[0];
+            first_device
+        });
 
         let src = sources::kernel::<E>(device.vendor() == opencl::Vendor::Nvidia);
 
@@ -46,7 +47,8 @@ where
         let omegas_buffer = program.create_buffer::<E::Fr>(LOG2_MAX_ELEMENTS)?;
 
         info!("FFT: 1 working device(s) selected.");
-        info!("FFT: Device 0: {}", device.name());
+        // info!("FFT: Device 0: {}", device.name());
+        info!("FFT: Device: {:?}", device);
 
         Ok(FFTKernel {
             program,
