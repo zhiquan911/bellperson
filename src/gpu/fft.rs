@@ -35,8 +35,12 @@ where
             return Err(GPUError::Simple("No working GPUs found!"));
         }
 
-        // Select the first device for FFT
-        let device = devices[0].clone();
+        // Select the locked gpu device for FFT
+        let device = super::get_lock_gpu_device().unwrap_or_else(|_| {
+            // Select the first device for FFT
+            let first_device = devices[0];
+            first_device
+        });
 
         let src = sources::kernel::<E>(device.brand() == opencl::Brand::Nvidia);
 
@@ -45,7 +49,8 @@ where
         let omegas_buffer = program.create_buffer::<E::Fr>(LOG2_MAX_ELEMENTS)?;
 
         info!("FFT: 1 working device(s) selected.");
-        info!("FFT: Device 0: {}", program.device().name());
+        // info!("FFT: Device 0: {}", program.device().name());
+        info!("FFT: Device: {:?}", device);
 
         Ok(FFTKernel {
             program,

@@ -80,9 +80,23 @@ pub fn dump_device_list() {
     }
 }
 
+pub fn get_lock_gpu_device() -> opencl::GPUResult<&'static opencl::Device> {
+    let uuid = env::var("BELLMAN_LOCK_GPU_DEVICE_UUID").map_err(|_| opencl::GPUError::DeviceNotFound)?;
+    let device_uuid: opencl::DeviceUuid = uuid.as_str().try_into()?;
+    opencl::Device::by_uuid(device_uuid)
+}
+
 #[cfg(feature = "gpu")]
 #[test]
 pub fn test_list_devices() {
     let _ = env_logger::try_init();
     dump_device_list();
+}
+
+#[cfg(feature = "gpu")]
+#[test]
+pub fn test_get_lock_gpu_device() {
+    let _ = env_logger::try_init();
+    let device = get_lock_gpu_device().expect("can not find env");
+    info!("Device: {:?}", device);
 }
