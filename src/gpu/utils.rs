@@ -96,6 +96,7 @@ pub fn test_list_devices() {
 #[cfg(feature = "gpu")]
 #[test]
 pub fn test_get_lock_gpu_device() {
+    let _ = env_logger::try_init();
     let device = get_lock_gpu_device().expect("can not find env");
-    println!("device: {:?}", device);
+    info!("Device: {:?}", device);
 }
