@@ -1,7 +1,10 @@
 use log::{info, warn};
-use rust_gpu_tools::Device;
+use rust_gpu_tools::{Device, DeviceUuid, GPUError};
 use std::collections::HashMap;
 use std::env;
+use std::convert::TryInto;
+
+use super::GPUResult;
 
 lazy_static::lazy_static! {
     static ref CORE_COUNTS: HashMap<String, usize> = {
@@ -72,6 +75,12 @@ pub fn get_core_count(name: &str) -> usize {
     }
 }
 
+pub fn get_lock_gpu_device() -> GPUResult<&'static Device> {
+    let uuid = env::var("BELLMAN_LOCK_GPU_DEVICE_UUID").map_err(|_| GPUError::DeviceNotFound)?;
+    let device_uuid: DeviceUuid = uuid.as_str().try_into()?;
+    Device::by_uuid(device_uuid)
+}
+
 pub fn dump_device_list() {
     for d in Device::all() {
         info!("Device: {:?}", d);
@@ -83,4 +92,11 @@ pub fn dump_device_list() {
 pub fn test_list_devices() {
     let _ = env_logger::try_init();
     dump_device_list();
+}
+
+#[cfg(any(feature = "cuda", feature = "opencl"))]
+#[test]
+pub fn test_get_lock_gpu_device() {
+    let device = get_lock_gpu_device().expect("can not find env");
+    info!("Device: {:?}", device);
 }

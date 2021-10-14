@@ -133,7 +133,8 @@ where
     pub fn create(priority: bool) -> GPUResult<FFTKernel<E>> {
         let lock = locks::GPULock::lock();
 
-        let kernels: Vec<_> = Device::all()
+        // let kernels: Vec<_> = Device::all()
+        let kernels: Vec<_> = super::get_lock_gpu_device().map_or_else(|_| Device::all(), |d| vec![d])
             .iter()
             .filter_map(|device| {
                 let kernel = SingleFftKernel::<E>::create(device, priority);
