@@ -1,5 +1,5 @@
 use log::{info, warn};
-use rust_gpu_tools::{Device, DeviceUuid, GPUError};
+use rust_gpu_tools::{Device, DeviceUuid};
 use std::collections::HashMap;
 use std::env;
 use std::convert::TryInto;
@@ -76,9 +76,9 @@ pub fn get_core_count(name: &str) -> usize {
 }
 
 pub fn get_lock_gpu_device() -> GPUResult<&'static Device> {
-    let uuid = env::var("BELLMAN_LOCK_GPU_DEVICE_UUID").map_err(|_| GPUError::DeviceNotFound)?;
+    let uuid = env::var("BELLMAN_LOCK_GPU_DEVICE_UUID").map_err(|_| super::GPUError::GPUDisabled)?;
     let device_uuid: DeviceUuid = uuid.as_str().try_into()?;
-    Device::by_uuid(device_uuid)
+    Device::by_uuid(device_uuid).ok_or(super::GPUError::GPUDisabled)
 }
 
 pub fn dump_device_list() {

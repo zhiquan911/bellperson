@@ -232,7 +232,7 @@ where
 
         // Select the locked gpu device for FFT
         // let kernels: Vec<_> = Device::all()
-        let kernels = super::get_lock_gpu_device().map_or_else(|_| Device::all(), |d| vec![d])
+        let kernels: Vec<_> = super::get_lock_gpu_device().map_or_else(|_| Device::all(), |d| vec![d])
             .iter()
             .filter_map(|device| {
                 info!("Multiexp: Device: {:?}", device);
