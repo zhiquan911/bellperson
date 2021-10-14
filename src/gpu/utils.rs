@@ -98,5 +98,5 @@ pub fn test_list_devices() {
 #[test]
 pub fn test_get_lock_gpu_device() {
     let device = get_lock_gpu_device().expect("can not find env");
-    info!("Device: {:?}", device);
+    println!("Device: {:?}", device);
 }
